@@ -5,6 +5,7 @@ import com.gbsw.gbsw.dto.BoardResponse;
 import com.gbsw.gbsw.entity.Board;
 import com.gbsw.gbsw.entity.Like;
 import com.gbsw.gbsw.entity.User;
+import com.gbsw.gbsw.enums.SortType;
 import com.gbsw.gbsw.repository.BoardRepository;
 import com.gbsw.gbsw.repository.LikeRepository;
 import com.gbsw.gbsw.repository.UserRepository;
@@ -30,18 +31,29 @@ public class BoardController {
     private final JwtUtil jwtUtil;
 
     @GetMapping
-    @Operation(summary = "전체 게시글 목록 조회", security = @SecurityRequirement(name = "BearerAuth"))
-    public List<BoardResponse> getAllBoards(HttpServletRequest requestObj) {
+    @Operation(summary = "전체 게시글 목록 조회", security = {})
+    public List<BoardResponse> getAllBoards(@RequestParam(name = "sortType", defaultValue = "LATEST") SortType sortType, HttpServletRequest request) {
         User user = null;
         try {
-            String token = jwtUtil.resolveToken(requestObj);
+            String token = jwtUtil.resolveToken(request);
             String username = jwtUtil.validateAndGetUsername(token);
             user = userRepository.findByUsername(username).orElse(null);
         } catch (Exception ignored) {}
 
+        List<Board> boards = switch (sortType) {
+            case VIEWS -> boardRepository.findAllByIsDeletedFalseOrderByViewCountDesc();
+            case LIKES -> boardRepository.findAllOrderByLikeCount();
+            case LATEST -> boardRepository.findAllByIsDeletedFalseOrderByCreatedAtDesc();
+        };
+
         User finalUser = user;
-        return boardRepository.findAll().stream()
-                .map(board -> convertToResponse(board, finalUser))
+        return boards.stream()
+                .map(board -> BoardResponse.of(
+                        board,
+                        finalUser,
+                        likeRepository.countByBoard(board),
+                        finalUser != null && likeRepository.existsByUserAndBoard(finalUser, board)
+                ))
                 .toList();
     }
 
@@ -49,6 +61,7 @@ public class BoardController {
     @Operation(summary = "단일 게시글 조회", security = @SecurityRequirement(name = "BearerAuth"))
     public BoardResponse getBoard(@PathVariable Long id, HttpServletRequest requestObj) {
         Board board = boardRepository.findById(id)
+                .filter(b -> !b.isDeleted())
                 .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
 
         board.setViewCount(board.getViewCount() + 1);
@@ -61,7 +74,10 @@ public class BoardController {
             user = userRepository.findByUsername(username).orElse(null);
         } catch (Exception ignored) {}
 
-        return convertToResponse(board, user);
+        long likeCount = likeRepository.countByBoard(board);
+        boolean liked = user != null && likeRepository.existsByUserAndBoard(user, board);
+
+        return BoardResponse.of(board, user, likeCount, liked);
     }
 
     @PostMapping
@@ -79,9 +95,12 @@ public class BoardController {
                 .user(user)
                 .createdAt(LocalDateTime.now())
                 .viewCount(0)
+                .isDeleted(false)
                 .build();
 
-        return convertToResponse(boardRepository.save(board), user);
+        long likeCount = 0;
+        boolean liked = false;
+        return BoardResponse.of(boardRepository.save(board), user, likeCount, liked);
     }
 
     @PutMapping("/{id}")
@@ -91,6 +110,7 @@ public class BoardController {
         String username = jwtUtil.validateAndGetUsername(token);
 
         Board board = boardRepository.findById(id)
+                .filter(b -> !b.isDeleted())
                 .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
 
         if (!board.getUser().getUsername().equals(username)) {
@@ -100,7 +120,9 @@ public class BoardController {
         board.setTitle(request.getTitle());
         board.setContent(request.getContent());
 
-        return convertToResponse(boardRepository.save(board), board.getUser());
+        long likeCount = likeRepository.countByBoard(board);
+        boolean liked = likeRepository.existsByUserAndBoard(board.getUser(), board);
+        return BoardResponse.of(boardRepository.save(board), board.getUser(), likeCount, liked);
     }
 
     @DeleteMapping("/{id}")
@@ -110,14 +132,16 @@ public class BoardController {
         String username = jwtUtil.validateAndGetUsername(token);
 
         Board board = boardRepository.findById(id)
+                .filter(b -> !b.isDeleted())
                 .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
 
         if (!board.getUser().getUsername().equals(username)) {
             throw new IllegalArgumentException("작성자만 삭제할 수 있습니다.");
         }
 
-        boardRepository.delete(board);
-        return "삭제 완료";
+        board.setDeleted(true);
+        boardRepository.save(board);
+        return "삭제 완료 (논리 삭제)";
     }
 
     @PostMapping("/{id}/like")
@@ -127,6 +151,7 @@ public class BoardController {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         Board board = boardRepository.findById(id)
+                .filter(b -> !b.isDeleted())
                 .orElseThrow(() -> new RuntimeException("Board not found"));
 
         if (likeRepository.existsByUserAndBoard(user, board)) {
@@ -137,21 +162,5 @@ public class BoardController {
             likeRepository.save(like);
             return ResponseEntity.ok("좋아요 추가됨");
         }
-    }
-
-    private BoardResponse convertToResponse(Board board, User user) {
-        long likeCount = likeRepository.countByBoard(board);
-        boolean liked = user != null && likeRepository.existsByUserAndBoard(user, board);
-
-        return BoardResponse.builder()
-                .id(board.getId())
-                .title(board.getTitle())
-                .content(board.getContent())
-                .writer(board.getUser().getUsername())
-                .createdAt(board.getCreatedAt())
-                .likeCount(likeCount)
-                .viewCount(board.getViewCount())
-                .likedByUser(liked)
-                .build();
     }
 }
