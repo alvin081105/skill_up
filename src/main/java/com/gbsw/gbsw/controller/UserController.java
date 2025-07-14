@@ -34,6 +34,7 @@ public class UserController {
         User newUser = User.builder()
                 .username(request.getUsername())
                 .password(hashedPassword)
+                .role("USER")  // 기본 권한 USER로 설정
                 .build();
         userRepository.save(newUser);
 
@@ -54,7 +55,8 @@ public class UserController {
             throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
         }
 
-        String token = jwtUtil.generateToken(user.getUsername());
+        // 🔥 역할 정보 포함해서 JWT 생성
+        String token = jwtUtil.generateToken(user.getUsername(), user.getRole());
         return new UserResponse(token);
     }
 }
