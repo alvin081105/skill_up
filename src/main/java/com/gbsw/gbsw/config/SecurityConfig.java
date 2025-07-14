@@ -1,13 +1,12 @@
 package com.gbsw.gbsw.config;
 
-import com.gbsw.gbsw.config.JwtFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
@@ -24,13 +23,14 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/auth/**",
                                 "/api/user/**",
-                                "/api/board",        // 전체 게시글 목록
-                                "/api/board/**",     // 단일 조회 포함
+                                "/api/board",         // 전체 게시글 목록
+                                "/api/board/**",      // 단일 조회 포함
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/swagger-resources/**"
                         ).permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN") // 관리자 전용 API
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
