@@ -31,4 +31,8 @@ public class User {
     public void setCreatedAt() {
         this.createdAt = LocalDateTime.now();
     }
+
+    @Column(nullable = false)
+    private String role; // 예: ROLE_USER, ROLE_ADMIN
+
 }
