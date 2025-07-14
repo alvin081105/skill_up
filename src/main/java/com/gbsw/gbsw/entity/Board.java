@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "board")
@@ -34,9 +36,20 @@ public class Board {
     @Column(name = "view_count")
     private int viewCount;
 
+    @Builder.Default
+    @Column(name = "is_deleted")
+    private boolean isDeleted = false;
+
+    @Builder.Default
+    @OneToMany(mappedBy = "board", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Like> likes = new ArrayList<>();
+
     @PrePersist
     public void setCreatedAt() {
         this.createdAt = LocalDateTime.now();
-        this.viewCount = 0;
+    }
+
+    public boolean isDeleted() {
+        return isDeleted;
     }
 }
