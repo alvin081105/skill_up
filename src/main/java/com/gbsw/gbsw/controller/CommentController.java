@@ -60,8 +60,9 @@ public class CommentController {
 
         Comment saved = commentRepository.save(comment);
         Comment loaded = commentRepository.findById(saved.getId()).orElseThrow();
-        return toResponse(loaded, user);
-
+        long likeCount = commentLikeRepository.countByComment(loaded);
+        boolean liked = commentLikeRepository.existsByUserAndComment(user, loaded);
+        return CommentResponse.from(loaded, likeCount, liked);
     }
 
     @GetMapping("/{boardId}")
@@ -82,7 +83,11 @@ public class CommentController {
                 .findByBoardAndParentIsNullOrderByCreatedAtAsc(board);
 
         return topLevelComments.stream()
-                .map(comment -> toResponse(comment, finalUser))
+                .map(comment -> CommentResponse.from(
+                        comment,
+                        commentLikeRepository.countByComment(comment),
+                        finalUser != null && commentLikeRepository.existsByUserAndComment(finalUser, comment)
+                ))
                 .collect(Collectors.toList());
     }
 
@@ -101,7 +106,10 @@ public class CommentController {
         }
 
         comment.setContent(request.getContent());
-        return toResponse(commentRepository.save(comment), comment.getUser());
+        Comment updated = commentRepository.save(comment);
+        long likeCount = commentLikeRepository.countByComment(updated);
+        boolean liked = commentLikeRepository.existsByUserAndComment(updated.getUser(), updated);
+        return CommentResponse.from(updated, likeCount, liked);
     }
 
     @DeleteMapping("/{id}")
@@ -144,25 +152,5 @@ public class CommentController {
             commentLikeRepository.save(like);
             return ResponseEntity.ok("댓글 좋아요 추가됨");
         }
-    }
-
-    private CommentResponse toResponse(Comment comment, User user) {
-        List<CommentResponse> children = comment.getChildren().stream()
-                .map(c -> toResponse(c, user))
-                .collect(Collectors.toList());
-
-        long likeCount = commentLikeRepository.countByComment(comment);
-        boolean liked = user != null && commentLikeRepository.existsByUserAndComment(user, comment);
-
-        return CommentResponse.builder()
-                .id(comment.getId())
-                .content(comment.isDeleted() ? "삭제된 댓글입니다." : comment.getContent())
-                .writer(comment.getUser().getUsername())
-                .createdAt(comment.getCreatedAt())
-                .deleted(comment.isDeleted())
-                .likeCount(likeCount)
-                .likedByUser(liked)
-                .children(children)
-                .build();
     }
 }
