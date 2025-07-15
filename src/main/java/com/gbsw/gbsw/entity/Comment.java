@@ -41,19 +41,28 @@ public class Comment {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
-    @Column(name = "is_deleted")
-    private boolean isDeleted;
+    @Builder.Default
+    @Column(name = "is_deleted", nullable = false)
+    private boolean isDeleted = false;
 
     @PrePersist
     public void onCreate() {
         this.createdAt = LocalDateTime.now();
     }
 
-    // NPE 방지용 안전 getter
+    // 안전한 getter
     public List<Comment> getChildren() {
         if (children == null) {
             children = new ArrayList<>();
         }
         return children;
+    }
+
+    public boolean isDeleted() {
+        return this.isDeleted;
+    }
+
+    public void softDelete() {
+        this.isDeleted = true;
     }
 }

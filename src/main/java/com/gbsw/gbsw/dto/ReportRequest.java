@@ -1,11 +1,10 @@
 package com.gbsw.gbsw.dto;
 
-import com.gbsw.gbsw.enums.ReportType;
-import lombok.Getter;
+import lombok.Data;
 
-@Getter
+@Data
 public class ReportRequest {
-    private Long targetId; // boardId 또는 commentId
+    private Long contentId;
+    private String contentType; // "BOARD" 또는 "COMMENT"
     private String reason;
-    private ReportType reportType;
 }

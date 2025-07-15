@@ -37,7 +37,7 @@ public class Board {
     private int viewCount;
 
     @Builder.Default
-    @Column(name = "is_deleted")
+    @Column(name = "is_deleted", nullable = false)
     private boolean isDeleted = false;
 
     @Builder.Default
@@ -49,7 +49,14 @@ public class Board {
         this.createdAt = LocalDateTime.now();
     }
 
+    // 안전한 getter
     public boolean isDeleted() {
-        return isDeleted;
+        return this.isDeleted;
+    }
+
+
+    // 삭제 마킹 메서드
+    public void softDelete() {
+        this.isDeleted = true;
     }
 }
