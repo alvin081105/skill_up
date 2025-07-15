@@ -33,6 +33,7 @@ public class Report {
     @Column(nullable = false)
     private String reason;
 
+    @Builder.Default
     @Column(nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 }

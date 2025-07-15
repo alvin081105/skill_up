@@ -163,4 +163,31 @@ public class BoardController {
             return ResponseEntity.ok("좋아요 추가됨");
         }
     }
+
+    @GetMapping("/search")
+    @Operation(summary = "게시글 검색", description = "제목 또는 내용에 키워드가 포함된 게시글을 검색합니다.")
+    public ResponseEntity<List<BoardResponse>> searchBoards(@RequestParam String keyword, HttpServletRequest request) {
+        User user = null;
+        try {
+            String token = jwtUtil.resolveToken(request);
+            String username = jwtUtil.validateAndGetUsername(token);
+            user = userRepository.findByUsername(username).orElse(null);
+        } catch (Exception ignored) {}
+
+        List<Board> boards = boardRepository
+                .findByIsDeletedFalseAndTitleContainingIgnoreCaseOrContentContainingIgnoreCase(keyword, keyword);
+
+        User finalUser = user;
+        List<BoardResponse> response = boards.stream()
+                .map(board -> BoardResponse.of(
+                        board,
+                        finalUser,
+                        likeRepository.countByBoard(board),
+                        finalUser != null && likeRepository.existsByUserAndBoard(finalUser, board)
+                ))
+                .toList();
+
+        return ResponseEntity.ok(response);
+    }
+
 }

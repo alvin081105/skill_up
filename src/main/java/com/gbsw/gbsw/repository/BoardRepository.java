@@ -17,4 +17,7 @@ public interface BoardRepository extends JpaRepository<Board, Long> {
     // 추천 많은 순 (Like 수 기준)
     @Query("SELECT b FROM Board b LEFT JOIN b.likes l WHERE b.isDeleted = false GROUP BY b ORDER BY COUNT(l) DESC")
     List<Board> findAllOrderByLikeCount();
+
+    // 키워드 검색 (제목 or 내용)
+    List<Board> findByIsDeletedFalseAndTitleContainingIgnoreCaseOrContentContainingIgnoreCase(String title, String content);
 }

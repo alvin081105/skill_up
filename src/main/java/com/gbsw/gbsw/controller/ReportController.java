@@ -9,6 +9,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,16 +25,17 @@ public class ReportController {
     private final BoardRepository boardRepository;
     private final CommentRepository commentRepository;
 
-    @Operation(
-            summary = "신고 등록",
-            description = "게시글 또는 댓글을 신고합니다.",
-            security = @SecurityRequirement(name = "Bearer Authentication")
-    )
-    @PostMapping("/{userId}")
-    public ResponseEntity<String> report(@PathVariable Long userId, @RequestBody ReportRequest request) {
-        User reporter = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("신고자 없음"));
+    @PostMapping
+    @Operation(summary = "신고 등록", description = "게시글 또는 댓글을 신고합니다.", security = @SecurityRequirement(name = "BearerAuth"))
+    public ResponseEntity<String> report(@RequestBody ReportRequest request) {
+        // 현재 인증된 사용자 정보 가져오기
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
 
+        User reporter = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("사용자 없음"));
+
+        // 신고 대상 처리
         Report.ReportBuilder builder = Report.builder()
                 .reporter(reporter)
                 .reason(request.getReason())
@@ -52,12 +55,8 @@ public class ReportController {
         return ResponseEntity.ok("신고 완료");
     }
 
-    @Operation(
-            summary = "신고 전체 조회 (관리자 전용)",
-            description = "모든 신고 내역을 조회합니다.",
-            security = @SecurityRequirement(name = "Bearer Authentication")
-    )
     @GetMapping("/admin")
+    @Operation(summary = "신고 전체 조회 (관리자 전용)", security = @SecurityRequirement(name = "BearerAuth"))
     public ResponseEntity<List<ReportResponse>> getAllReports() {
         List<ReportResponse> result = reportRepository.findAll().stream().map(r -> ReportResponse.builder()
                 .id(r.getId())
