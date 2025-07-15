@@ -5,7 +5,10 @@ import com.gbsw.gbsw.dto.ReportResponse;
 import com.gbsw.gbsw.entity.*;
 import com.gbsw.gbsw.enums.ReportType;
 import com.gbsw.gbsw.repository.*;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,8 +23,13 @@ public class ReportController {
     private final BoardRepository boardRepository;
     private final CommentRepository commentRepository;
 
+    @Operation(
+            summary = "신고 등록",
+            description = "게시글 또는 댓글을 신고합니다.",
+            security = @SecurityRequirement(name = "Bearer Authentication")
+    )
     @PostMapping("/{userId}")
-    public String report(@PathVariable Long userId, @RequestBody ReportRequest request) {
+    public ResponseEntity<String> report(@PathVariable Long userId, @RequestBody ReportRequest request) {
         User reporter = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("신고자 없음"));
 
@@ -41,12 +49,17 @@ public class ReportController {
         }
 
         reportRepository.save(builder.build());
-        return "신고 완료";
+        return ResponseEntity.ok("신고 완료");
     }
 
+    @Operation(
+            summary = "신고 전체 조회 (관리자 전용)",
+            description = "모든 신고 내역을 조회합니다.",
+            security = @SecurityRequirement(name = "Bearer Authentication")
+    )
     @GetMapping("/admin")
-    public List<ReportResponse> getAllReports() {
-        return reportRepository.findAll().stream().map(r -> ReportResponse.builder()
+    public ResponseEntity<List<ReportResponse>> getAllReports() {
+        List<ReportResponse> result = reportRepository.findAll().stream().map(r -> ReportResponse.builder()
                 .id(r.getId())
                 .reporterId(r.getReporter().getId())
                 .boardId(r.getBoard() != null ? r.getBoard().getId() : null)
@@ -55,5 +68,7 @@ public class ReportController {
                 .reportType(r.getReportType())
                 .build()
         ).toList();
+
+        return ResponseEntity.ok(result);
     }
 }
