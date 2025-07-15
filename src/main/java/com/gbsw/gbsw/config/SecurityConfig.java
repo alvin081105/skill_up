@@ -22,23 +22,20 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/api/auth/**",              // 로그인, 토큰 발급 등
-                                "/api/user/**",              // 회원가입, 사용자 관련
-                                "/api/board",                // 게시글 목록
+                                "/api/auth/**",
+                                "/api/user/**",
+                                "/api/board",
                                 "/api/board/**",
-                                "/api/posts/search",// 게시글 단건 조회 등
-                                "/v3/api-docs/**",           // Swagger 문서
+                                "/api/posts/search",
+                                "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/swagger-resources/**"
                         ).permitAll()
 
-                        .requestMatchers("/api/report/admin").hasRole("ADMIN")   // 관리자용 신고 조회
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")       // 기타 관리자 전용
-
-                        .requestMatchers("/api/report/**").authenticated()       // 일반 신고 등록은 인증만
-
-                        .anyRequest().authenticated() // 나머지 모든 요청은 인증 필요
+                        .requestMatchers("/api/report/admin").hasRole("ADMIN") // 🔐 신고 조회만 관리자 제한
+                        .requestMatchers("/api/report").authenticated()        // ✅ 신고 등록은 로그인만
+                        .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .formLogin(form -> form.disable())

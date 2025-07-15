@@ -15,7 +15,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 
 @Component
@@ -32,24 +31,33 @@ public class JwtFilter extends OncePerRequestFilter {
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
-            if (jwtUtil.validateToken(token)) {
-                String username = jwtUtil.getUsernameFromToken(token);
-                String role = jwtUtil.getRoleFromToken(token); // 추가된 부분
+            try {
+                if (jwtUtil.validateToken(token)) {
+                    String username = jwtUtil.getUsernameFromToken(token);
+                    String role = jwtUtil.getRoleFromToken(token);
 
-                SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + role);
+                    SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + role);
 
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(
-                                new User(username, "", List.of(authority)),
-                                null,
-                                List.of(authority)
-                        );
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(
+                                    new User(username, "", List.of(authority)),
+                                    null,
+                                    List.of(authority)
+                            );
+                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
 
-            } else {
+                    System.out.println("[JwtFilter] 인증 완료 - " + username + ", 권한: " + role);
+                } else {
+                    System.out.println("[JwtFilter] JWT 유효성 실패");
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.getWriter().write("Invalid JWT token");
+                    return;
+                }
+            } catch (Exception e) {
+                System.out.println("[JwtFilter] 예외 발생: " + e.getMessage());
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                response.getWriter().write("Invalid JWT token");
+                response.getWriter().write("Token 처리 중 오류");
                 return;
             }
         }
