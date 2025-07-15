@@ -1,5 +1,7 @@
 package com.gbsw.gbsw.config;
 
+import com.gbsw.gbsw.entity.User;
+import com.gbsw.gbsw.repository.UserRepository;
 import com.gbsw.gbsw.util.JwtUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -9,7 +11,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -22,6 +23,7 @@ import java.util.List;
 public class JwtFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+    private final UserRepository userRepository; // ✅ 추가
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -36,14 +38,13 @@ public class JwtFilter extends OncePerRequestFilter {
                     String username = jwtUtil.getUsernameFromToken(token);
                     String role = jwtUtil.getRoleFromToken(token);
 
+                    User user = userRepository.findByUsername(username)
+                            .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
+
                     SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + role);
 
                     UsernamePasswordAuthenticationToken authentication =
-                            new UsernamePasswordAuthenticationToken(
-                                    new User(username, "", List.of(authority)),
-                                    null,
-                                    List.of(authority)
-                            );
+                            new UsernamePasswordAuthenticationToken(user, null, List.of(authority));
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authentication);
 

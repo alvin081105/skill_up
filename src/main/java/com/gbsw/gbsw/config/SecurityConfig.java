@@ -33,8 +33,8 @@ public class SecurityConfig {
                                 "/swagger-resources/**"
                         ).permitAll()
 
-                        .requestMatchers("/api/report/admin").hasRole("ADMIN") // 🔐 신고 조회만 관리자 제한
-                        .requestMatchers("/api/report").authenticated()        // ✅ 신고 등록은 로그인만
+                        .requestMatchers("/api/report/admin").hasRole("ADMIN") // 신고 조회만 관리자 제한
+                        .requestMatchers("/api/reports").authenticated()        // 신고 등록은 로그인만
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
