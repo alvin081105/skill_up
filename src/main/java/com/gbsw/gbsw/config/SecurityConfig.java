@@ -25,7 +25,8 @@ public class SecurityConfig {
                                 "/api/auth/**",              // 로그인, 토큰 발급 등
                                 "/api/user/**",              // 회원가입, 사용자 관련
                                 "/api/board",                // 게시글 목록
-                                "/api/board/**",             // 게시글 단건 조회 등
+                                "/api/board/**",
+                                "/api/posts/search",// 게시글 단건 조회 등
                                 "/v3/api-docs/**",           // Swagger 문서
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
